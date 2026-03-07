@@ -30,7 +30,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
 
 type Feedback = {
   overall_score: number;
