@@ -59,84 +59,120 @@ export default function FeedbackPage() {
     const doc = new jsPDF();
     const role = config.role || "Frontend Developer";
     const level = config.level || "Mid-Level";
+    const pageW = 210;
+    const margin = 14;
+    const contentW = pageW - margin * 2;
 
+    const checkPage = (yPos: number, needed = 20) => {
+      if (yPos + needed > 280) { doc.addPage(); return 20; }
+      return yPos;
+    };
+
+    // Title
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text("Interview Feedback Report", 14, 22);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Interview Feedback Report", margin, 22);
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100);
-    doc.text(`${role} · ${level}`, 14, 30);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
+    doc.text(`${role} · ${level}`, margin, 30);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, 36);
 
+    // Summary
     doc.setTextColor(40);
     doc.setFontSize(10);
-    const summaryLines = doc.splitTextToSize(feedback.summary, 180);
-    doc.text(summaryLines, 14, 46);
+    const summaryLines = doc.splitTextToSize(feedback.summary, contentW);
+    doc.text(summaryLines, margin, 46);
+    let y = 46 + summaryLines.length * 5 + 8;
 
-    let y = 46 + summaryLines.length * 5 + 6;
+    // Scores section
+    const scoreRows = [
+      ["Overall", feedback.overall_score],
+      ["Technical", feedback.technical_score],
+      ["Communication", feedback.communication_score],
+      ["Confidence", feedback.confidence_score],
+      ["Problem Solving", feedback.problem_solving_score],
+      ["Clarity", feedback.clarity_score],
+      ["Depth", feedback.depth_score],
+    ] as const;
 
-    doc.setFontSize(13);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("Scores", 14, y);
-    y += 4;
-    (doc as any).autoTable({
-      startY: y,
-      head: [["Category", "Score"]],
-      body: [
-        ["Overall", `${feedback.overall_score}/100`],
-        ["Technical", `${feedback.technical_score}/100`],
-        ["Communication", `${feedback.communication_score}/100`],
-        ["Confidence", `${feedback.confidence_score}/100`],
-        ["Problem Solving", `${feedback.problem_solving_score}/100`],
-        ["Clarity", `${feedback.clarity_score}/100`],
-        ["Depth", `${feedback.depth_score}/100`],
-      ],
-      theme: "grid",
-      headStyles: { fillColor: [30, 41, 59] },
-      styles: { fontSize: 10 },
-    });
+    doc.setTextColor(30, 41, 59);
+    doc.text("Scores", margin, y);
+    y += 8;
 
-    y = (doc as any).lastAutoTable.finalY + 10;
+    // Table header
+    doc.setFillColor(30, 41, 59);
+    doc.rect(margin, y - 5, contentW, 8, "F");
+    doc.setTextColor(255);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Category", margin + 4, y);
+    doc.text("Score", margin + contentW - 30, y);
+    y += 6;
 
+    // Table rows
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(40);
+    for (const [label, score] of scoreRows) {
+      doc.setDrawColor(200);
+      doc.line(margin, y + 3, margin + contentW, y + 3);
+      doc.text(label, margin + 4, y + 1);
+      doc.text(`${score}/100`, margin + contentW - 30, y + 1);
+      y += 8;
+    }
+    y += 6;
+
+    // Question scores
     if (feedback.question_scores.length > 0) {
-      doc.setFontSize(13);
+      y = checkPage(y, 30);
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("Question Scores", 14, y);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Question Scores", margin, y);
+      y += 8;
+
+      for (let i = 0; i < feedback.question_scores.length; i++) {
+        y = checkPage(y, 14);
+        const q = feedback.question_scores[i];
+        const qLines = doc.splitTextToSize(`Q${i + 1}: ${q.question}`, contentW - 40);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(40);
+        doc.text(qLines, margin + 4, y);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${q.score}/100`, margin + contentW - 30, y);
+        y += qLines.length * 4 + 6;
+      }
       y += 4;
-      (doc as any).autoTable({
-        startY: y,
-        head: [["Question", "Score"]],
-        body: feedback.question_scores.map((q, i) => [`Q${i + 1}: ${q.question}`, `${q.score}/100`]),
-        theme: "grid",
-        headStyles: { fillColor: [30, 41, 59] },
-        styles: { fontSize: 9, cellWidth: "wrap" },
-        columnStyles: { 0: { cellWidth: 140 }, 1: { cellWidth: 30 } },
-      });
-      y = (doc as any).lastAutoTable.finalY + 10;
     }
 
+    // Strengths / Weaknesses / Suggestions
     const sections = [
-      { title: "Strengths", items: feedback.strengths },
-      { title: "Areas to Improve", items: feedback.weaknesses },
-      { title: "Suggestions", items: feedback.suggestions },
+      { title: "Strengths", items: feedback.strengths, color: [22, 163, 74] as [number, number, number] },
+      { title: "Areas to Improve", items: feedback.weaknesses, color: [220, 38, 38] as [number, number, number] },
+      { title: "Suggestions", items: feedback.suggestions, color: [234, 179, 8] as [number, number, number] },
     ];
 
     for (const section of sections) {
-      if (y > 260) { doc.addPage(); y = 20; }
-      doc.setFontSize(13);
+      y = checkPage(y, 30);
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text(section.title, 14, y);
-      y += 6;
+      doc.setTextColor(...section.color);
+      doc.text(section.title, margin, y);
+      y += 7;
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
+      doc.setTextColor(40);
       for (const item of section.items) {
-        if (y > 275) { doc.addPage(); y = 20; }
-        const lines = doc.splitTextToSize(`• ${item}`, 180);
-        doc.text(lines, 16, y);
-        y += lines.length * 5 + 2;
+        y = checkPage(y, 12);
+        const lines = doc.splitTextToSize(`• ${item}`, contentW - 4);
+        doc.text(lines, margin + 4, y);
+        y += lines.length * 5 + 3;
       }
-      y += 4;
+      y += 6;
     }
 
     doc.save(`interview-feedback-${role.toLowerCase().replace(/\s+/g, "-")}.pdf`);
