@@ -151,19 +151,31 @@ export default function InterviewSession() {
     await handleAIResponse(updatedMsgs);
   }, [stopListening, messages, handleAIResponse, addDisplayMessage, sttSupported, startListening, toast]);
 
-  const endInterview = useCallback(() => {
+  const endInterview = useCallback(async () => {
     stopListening();
     cancelSpeech();
     setIsActive(false);
+
+    // Update session in DB
+    if (sessionId) {
+      await supabase.from("interview_sessions").update({
+        duration_seconds: elapsed,
+        transcript: displayMessages.map((m) => ({ speaker: m.speaker, text: m.text })),
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      }).eq("id", sessionId);
+    }
+
     navigate("/feedback", {
       state: {
         ...config,
+        sessionId,
         duration: elapsed,
         transcript: displayMessages,
         messages,
       },
     });
-  }, [stopListening, cancelSpeech, navigate, config, elapsed, displayMessages, messages]);
+  }, [stopListening, cancelSpeech, navigate, config, elapsed, displayMessages, messages, sessionId]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
