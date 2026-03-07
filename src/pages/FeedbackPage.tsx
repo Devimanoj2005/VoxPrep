@@ -209,6 +209,25 @@ export default function FeedbackPage() {
         if (data?.error) throw new Error(data.error);
         if (data?.feedback) {
           setFeedback(data.feedback);
+          // Save feedback to DB
+          if (user && config.sessionId) {
+            await supabase.from("interview_feedback").insert({
+              session_id: config.sessionId,
+              user_id: user.id,
+              overall_score: data.feedback.overall_score,
+              technical_score: data.feedback.technical_score,
+              communication_score: data.feedback.communication_score,
+              confidence_score: data.feedback.confidence_score,
+              problem_solving_score: data.feedback.problem_solving_score,
+              clarity_score: data.feedback.clarity_score,
+              depth_score: data.feedback.depth_score,
+              strengths: data.feedback.strengths,
+              weaknesses: data.feedback.weaknesses,
+              suggestions: data.feedback.suggestions,
+              question_scores: data.feedback.question_scores,
+              summary: data.feedback.summary,
+            });
+          }
         }
       } catch (err: any) {
         toast({
