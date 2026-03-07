@@ -55,6 +55,94 @@ export default function FeedbackPage() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const exportPDF = useCallback(() => {
+    if (!feedback) return;
+    const doc = new jsPDF();
+    const role = config.role || "Frontend Developer";
+    const level = config.level || "Mid-Level";
+
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("Interview Feedback Report", 14, 22);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(`${role} · ${level}`, 14, 30);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
+
+    doc.setTextColor(40);
+    doc.setFontSize(10);
+    const summaryLines = doc.splitTextToSize(feedback.summary, 180);
+    doc.text(summaryLines, 14, 46);
+
+    let y = 46 + summaryLines.length * 5 + 6;
+
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Scores", 14, y);
+    y += 4;
+    (doc as any).autoTable({
+      startY: y,
+      head: [["Category", "Score"]],
+      body: [
+        ["Overall", `${feedback.overall_score}/100`],
+        ["Technical", `${feedback.technical_score}/100`],
+        ["Communication", `${feedback.communication_score}/100`],
+        ["Confidence", `${feedback.confidence_score}/100`],
+        ["Problem Solving", `${feedback.problem_solving_score}/100`],
+        ["Clarity", `${feedback.clarity_score}/100`],
+        ["Depth", `${feedback.depth_score}/100`],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 10 },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 10;
+
+    if (feedback.question_scores.length > 0) {
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.text("Question Scores", 14, y);
+      y += 4;
+      (doc as any).autoTable({
+        startY: y,
+        head: [["Question", "Score"]],
+        body: feedback.question_scores.map((q, i) => [`Q${i + 1}: ${q.question}`, `${q.score}/100`]),
+        theme: "grid",
+        headStyles: { fillColor: [30, 41, 59] },
+        styles: { fontSize: 9, cellWidth: "wrap" },
+        columnStyles: { 0: { cellWidth: 140 }, 1: { cellWidth: 30 } },
+      });
+      y = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    const sections = [
+      { title: "Strengths", items: feedback.strengths },
+      { title: "Areas to Improve", items: feedback.weaknesses },
+      { title: "Suggestions", items: feedback.suggestions },
+    ];
+
+    for (const section of sections) {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.text(section.title, 14, y);
+      y += 6;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      for (const item of section.items) {
+        if (y > 275) { doc.addPage(); y = 20; }
+        const lines = doc.splitTextToSize(`• ${item}`, 180);
+        doc.text(lines, 16, y);
+        y += lines.length * 5 + 2;
+      }
+      y += 4;
+    }
+
+    doc.save(`interview-feedback-${role.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+  }, [feedback, config]);
+
   useEffect(() => {
     async function generateFeedback() {
       const transcript = config.transcript;
