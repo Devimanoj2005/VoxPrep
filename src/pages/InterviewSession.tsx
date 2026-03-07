@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useSpeechRecognition, useSpeechSynthesis } from "@/hooks/use-speech";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 type Message = {
   role: "user" | "assistant";
@@ -29,6 +30,8 @@ export default function InterviewSession() {
     questionCount: 5,
   };
 
+  const { user } = useAuth();
+
   const [isActive, setIsActive] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,6 +39,7 @@ export default function InterviewSession() {
   const [isAIThinking, setIsAIThinking] = useState(false);
   const [isUserTurn, setIsUserTurn] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
   const { isListening, transcript, start: startListening, stop: stopListening, supported: sttSupported } = useSpeechRecognition();
@@ -114,10 +118,22 @@ export default function InterviewSession() {
     setDisplayMessages([]);
     setCurrentQuestion(0);
 
-    // Send initial empty message to get AI greeting + first question
+    // Create session in DB
+    if (user) {
+      const { data } = await supabase.from("interview_sessions").insert({
+        user_id: user.id,
+        role: config.role,
+        level: config.level,
+        tech_stack: config.techStack || [],
+        question_count: config.questionCount,
+        status: "in_progress",
+      }).select("id").single();
+      if (data) setSessionId(data.id);
+    }
+
     const initialMsg: Message = { role: "user", content: "Start the interview." };
     await handleAIResponse([initialMsg]);
-  }, [handleAIResponse]);
+  }, [handleAIResponse, user, config]);
 
   const submitAnswer = useCallback(async () => {
     const userText = stopListening();
@@ -135,19 +151,31 @@ export default function InterviewSession() {
     await handleAIResponse(updatedMsgs);
   }, [stopListening, messages, handleAIResponse, addDisplayMessage, sttSupported, startListening, toast]);
 
-  const endInterview = useCallback(() => {
+  const endInterview = useCallback(async () => {
     stopListening();
     cancelSpeech();
     setIsActive(false);
+
+    // Update session in DB
+    if (sessionId) {
+      await supabase.from("interview_sessions").update({
+        duration_seconds: elapsed,
+        transcript: displayMessages.map((m) => ({ speaker: m.speaker, text: m.text })),
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      }).eq("id", sessionId);
+    }
+
     navigate("/feedback", {
       state: {
         ...config,
+        sessionId,
         duration: elapsed,
         transcript: displayMessages,
         messages,
       },
     });
-  }, [stopListening, cancelSpeech, navigate, config, elapsed, displayMessages, messages]);
+  }, [stopListening, cancelSpeech, navigate, config, elapsed, displayMessages, messages, sessionId]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
