@@ -108,6 +108,9 @@ export default function Dashboard() {
           <Button variant="hero" size="sm" onClick={() => navigate("/setup")}>
             <Plus className="w-4 h-4" /> New Interview
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
+            <UserCircle className="w-4 h-4" />
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleSignOut}>
             <LogOut className="w-4 h-4" />
           </Button>
