@@ -189,23 +189,23 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="relative z-10 max-w-4xl mx-auto px-6 pb-32 text-center">
-        <motion.div
-          className="glass-strong rounded-2xl p-12"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}>
-          
-          <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
-            Ready to Start Practicing?
-          </h2>
-          <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-            Join thousands of developers who improved their interview skills with VoxPrep.
-          </p>
-          <Button variant="glow" size="xl" onClick={() => navigate("/setup")}>
-            Begin Your First Interview
-            <ArrowRight className="w-5 h-5" />
-          </Button>
-        </motion.div>
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
       </section>
 
       {/* Footer */}
