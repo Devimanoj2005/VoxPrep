@@ -109,8 +109,13 @@ export default function Dashboard() {
           <Button variant="hero" size="sm" onClick={() => navigate("/setup")}>
             <Plus className="w-4 h-4" /> New Interview
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
-            <UserCircle className="w-4 h-4" />
+          <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="p-0 w-8 h-8 rounded-full">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "?"}
+              </AvatarFallback>
+            </Avatar>
           </Button>
           <Button variant="ghost" size="sm" onClick={handleSignOut}>
             <LogOut className="w-4 h-4" />
